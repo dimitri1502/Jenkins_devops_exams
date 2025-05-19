@@ -1,61 +1,64 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "fastapiapp.fullname" . }}
+  name: {{ include "fastapiapp.fullname" . }}-movie-service
   labels:
-    {{- include "fastapiapp.labels" . | nindent 4 }}
+    app: {{ include "fastapiapp.name" . }}
+    component: movie-service
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
-      {{- include "fastapiapp.selectorLabels" . | nindent 6 }}
+      app: {{ include "fastapiapp.name" . }}
+      component: movie-service
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
-        {{- include "fastapiapp.selectorLabels" . | nindent 8 }}
+        app: {{ include "fastapiapp.name" . }}
+        component: movie-service
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      serviceAccountName: {{ include "fastapiapp.serviceAccountName" . }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+        - name: movie-service
+          image: "{{ .Values.movie_service.image.repository }}:{{ .Values.movie_service.image.tag }}"
+          imagePullPolicy: {{ .Values.movie_service.image.pullPolicy }}
           ports:
-            - name: http
-              containerPort: 8000
-              protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /api/v1/checkapi
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /api/v1/checkapi
-              port: http
+            - containerPort: {{ .Values.movie_service.service.targetPort }}
+          env:
+            - name: DATABASE_URI
+              value: "{{ .Values.movie_service.env.DATABASE_URI }}"
+            - name: CAST_SERVICE_HOST_URL
+              value: "{{ .Values.movie_service.env.CAST_SERVICE_HOST_URL }}"
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+            {{- toYaml .Values.movie_service.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fastapiapp.fullname" . }}-cast-service
+  labels:
+    app: {{ include "fastapiapp.name" . }}
+    component: cast-service
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "fastapiapp.name" . }}
+      component: cast-service
+  template:
+    metadata:
+      labels:
+        app: {{ include "fastapiapp.name" . }}
+        component: cast-service
+    spec:
+      containers:
+        - name: cast-service
+          image: "{{ .Values.cast_service.image.repository }}:{{ .Values.cast_service.image.tag }}"
+          imagePullPolicy: {{ .Values.cast_service.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.cast_service.service.targetPort }}
+          env:
+            - name: DATABASE_URI
+              value: "{{ .Values.cast_service.env.DATABASE_URI }}"
+          resources:
+            {{- toYaml .Values.cast_service.resources | nindent 12 }}
