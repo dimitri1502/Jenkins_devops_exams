@@ -69,21 +69,6 @@ pipeline {
             }
         }
 
-        stage('Manual Approval for prod') {
-            when {
-                branch 'master'
-            }
-            steps {
-                script {
-                    echo "[INFO] Sur branche master, attente de validation manuelle..."
-
-                    timeout(time: 15, unit: 'MINUTES') {
-                        input message: '✅ Voulez-vous déployer en production ?', ok: 'Déployer en PROD'
-                    }
-                }
-            }
-        }
-
         stage('Deploy to prod') {
             when {
                 branch 'master'
@@ -92,6 +77,10 @@ pipeline {
                 KUBECONFIG = credentials("config")
             }
             steps {
+
+                   timeout(time: 15, unit: "MINUTES") {
+                        input message: 'Do you want to deploy in production ?', ok: 'Yes'
+                   }    
                 script {
                     deployWithHelm("prod")
                 }
