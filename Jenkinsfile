@@ -56,7 +56,7 @@ pipeline {
           cat $KUBECONFIG > .kube/config
           cp charts/values.yaml values-dev.yaml
           sed -i "s/tag:.*/tag: ${DOCKER_TAG}/g" values-dev.yaml
-          helm upgrade --install movieapp charts --values values-dev.yaml --namespace dev --create-namespace
+          helm upgrade --install movie-service charts --values values-dev.yaml --namespace dev --create-namespace
           '''
         }
       }
@@ -73,7 +73,7 @@ pipeline {
           cat $KUBECONFIG > .kube/config
           cp charts/values.yaml values-qa.yaml
           sed -i "s/tag:.*/tag: ${DOCKER_TAG}/g" values-qa.yaml
-          helm upgrade --install movieapp charts --values values-qa.yaml --namespace qa --create-namespace
+          helm upgrade --install movie-service charts --values values-qa.yaml --namespace qa --create-namespace
           '''
         }
       }
@@ -90,7 +90,7 @@ pipeline {
           cat $KUBECONFIG > .kube/config
           cp charts/values.yaml values-staging.yaml
           sed -i "s/tag:.*/tag: ${DOCKER_TAG}/g" values-staging.yaml
-          helm upgrade --install movieapp charts --values values-staging.yaml --namespace staging --create-namespace
+          helm upgrade --install movie-service charts --values values-staging.yaml --namespace staging --create-namespace
           '''
         }
       }
@@ -111,7 +111,7 @@ pipeline {
           cat $KUBECONFIG > .kube/config
           cp charts/values.yaml values-prod.yaml
           sed -i "s/tag:.*/tag: ${DOCKER_TAG}/g" values-prod.yaml
-          helm upgrade --install movieapp charts --values values-prod.yaml --namespace prod --create-namespace
+          helm upgrade --install movie-service charts --values values-prod.yaml --namespace prod --create-namespace
           '''
         }
       }
