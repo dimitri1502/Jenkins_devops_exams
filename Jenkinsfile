@@ -56,7 +56,7 @@ pipeline {
           cat $KUBECONFIG > .kube/config
           cp charts/values.yaml values-dev.yaml
           sed -i "s/tag:.*/tag: ${DOCKER_TAG}/g" values-dev.yaml
-          helm upgrade --install movie-service/app charts --values values-dev.yaml --namespace dev --create-namespace
+          helm upgrade --install movie-service-dev charts --values values-dev.yaml --namespace dev --create-namespace
           '''
         }
       }
