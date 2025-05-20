@@ -74,8 +74,11 @@ pipeline {
                 branch 'master'
             }
             steps {
+                script {
+                    echo "[INFO] Sur branche master, prêt pour la validation."
+                }  
                 timeout(time: 15, unit: "MINUTES") {
-                    input message: '🔐 Déployer en PROD ?'
+                    input message: 'Déployer manuellement en PROD ?', ok: 'Oui, déployer'
                 }
             }
         }
