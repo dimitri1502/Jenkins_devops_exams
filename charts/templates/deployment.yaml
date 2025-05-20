@@ -1,77 +1,61 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "fastapiapp.fullname" . }}-movie-service
+  name: {{ include "fastapiapp.fullname" . }}
   labels:
-    app: {{ include "fastapiapp.name" . }}
-    component: movie-service
+    {{- include "fastapiapp.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.movie_service.replicaCount | default .Values.replicaCount }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
-      app: {{ include "fastapiapp.name" . }}
-      component: movie-service
+      {{- include "fastapiapp.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
-        app: {{ include "fastapiapp.name" . }}
-        component: movie-service
+        {{- include "fastapiapp.selectorLabels" . | nindent 8 }}
     spec:
-      nodeSelector: {{ toYaml .Values.nodeSelector | nindent 6 }}
-      tolerations: {{ toYaml .Values.tolerations | nindent 6 }}
-      affinity: {{ toYaml .Values.affinity | nindent 6 }}
-      securityContext: {{ toYaml .Values.podSecurityContext | nindent 6 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "fastapiapp.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: movie-service
-          image: "{{ .Values.movie_service.image.repository }}:{{ .Values.movie_service.image.tag }}"
-          imagePullPolicy: {{ .Values.movie_service.image.pullPolicy }}
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.movie_service.service.targetPort }}
-          env:
-            {{- range $key, $value := .Values.movie_service.env }}
-            - name: {{ $key }}
-              value: "{{ $value }}"
-            {{- end }}
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /api/v1/checkapi
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /api/v1/checkapi
+              port: http
           resources:
-            {{- toYaml .Values.movie_service.resources | nindent 12 }}
-
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "fastapiapp.fullname" . }}-cast-service
-  labels:
-    app: {{ include "fastapiapp.name" . }}
-    component: cast-service
-spec:
-  replicas: {{ .Values.cast_service.replicaCount | default .Values.replicaCount }}
-  selector:
-    matchLabels:
-      app: {{ include "fastapiapp.name" . }}
-      component: cast-service
-  template:
-    metadata:
-      labels:
-        app: {{ include "fastapiapp.name" . }}
-        component: cast-service
-    spec:
-      nodeSelector: {{ toYaml .Values.nodeSelector | nindent 6 }}
-      tolerations: {{ toYaml .Values.tolerations | nindent 6 }}
-      affinity: {{ toYaml .Values.affinity | nindent 6 }}
-      securityContext: {{ toYaml .Values.podSecurityContext | nindent 6 }}
-      containers:
-        - name: cast-service
-          image: "{{ .Values.movie_service.image.repository }}:{{ .Values.movie_service.image.tag }}"
-          imagePullPolicy: {{ .Values.cast_service.image.pullPolicy }}
-          ports:
-            - containerPort: {{ .Values.cast_service.service.targetPort }}
-          env:
-            {{- range $key, $value := .Values.cast_service.env }}
-            - name: {{ $key }}
-              value: "{{ $value }}"
-            {{- end }}
-          resources:
-            {{- toYaml .Values.cast_service.resources | nindent 12 }}
-
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
