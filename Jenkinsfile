@@ -2,98 +2,118 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
-        DOCKERHUB_USER = "dimitri15"
+        DOCKER_ID = "dimitri15"
+        CAST_IMAGE = "cast-service"
+        MOVIE_IMAGE = "movie-service"
+        IMAGE_TAG = "v.${BUILD_ID}.0"
     }
 
     stages {
-        stage('Build & Push Images') {
+
+        stage('Docker Build') {
             steps {
                 script {
-                    docker.build("${DOCKERHUB_USER}/cast-service:${IMAGE_TAG}", './cast-service')
-                    docker.build("${DOCKERHUB_USER}/movie-service:${IMAGE_TAG}", './movie-service')
-
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
-                        docker.image("${DOCKERHUB_USER}/cast-service:${IMAGE_TAG}").push()
-                        docker.image("${DOCKERHUB_USER}/movie-service:${IMAGE_TAG}").push()
-                    }
+                    sh """
+                    docker build -t $DOCKER_ID/$CAST_IMAGE:$IMAGE_TAG ./cast-service
+                    docker build -t $DOCKER_ID/$MOVIE_IMAGE:$IMAGE_TAG ./movie-service
+                    """
                 }
             }
         }
 
-        stage('Deploy to DEV') {
+        stage('Docker Push') {
+            environment {
+                DOCKER_PASS = credentials("DOCKER_HUB_PASS")
+            }
             steps {
                 script {
-                    deployToEnv('dev')
+                    sh """
+                    echo "$DOCKER_PASS" | docker login -u $DOCKER_ID --password-stdin
+                    docker push $DOCKER_ID/$CAST_IMAGE:$IMAGE_TAG
+                    docker push $DOCKER_ID/$MOVIE_IMAGE:$IMAGE_TAG
+                    """
                 }
             }
         }
 
-        stage('Deploy to QA') {
+        stage('Deploy to dev') {
+            environment {
+                KUBECONFIG = credentials("config")
+            }
             steps {
                 script {
-                    deployToEnv('qa')
+                    deployWithHelm("dev")
                 }
             }
         }
 
-        stage('Deploy to STAGING') {
+        stage('Deploy to qa') {
+            environment {
+                KUBECONFIG = credentials("config")
+            }
             steps {
                 script {
-                    deployToEnv('staging')
+                    deployWithHelm("qa")
                 }
             }
         }
 
-        stage('Manual Approval for PROD') {
+        stage('Deploy to staging') {
+            environment {
+                KUBECONFIG = credentials("config")
+            }
+            steps {
+                script {
+                    deployWithHelm("staging")
+                }
+            }
+        }
+
+        stage('Manual Approval for prod') {
             when {
-                allOf {
-                    branch 'master'
-                }
+                branch 'master'
             }
             steps {
-                input message: "✅ Déployer manuellement en PROD ?"
+                timeout(time: 15, unit: "MINUTES") {
+                    input message: '🔐 Déployer en PROD ?'
+                }
             }
         }
 
-        stage('Deploy to PROD') {
+        stage('Deploy to prod') {
             when {
-                allOf {
-                    branch 'master'
-                }
+                branch 'master'
+            }
+            environment {
+                KUBECONFIG = credentials("config")
             }
             steps {
                 script {
-                    deployToEnv('prod')
+                    deployWithHelm("prod")
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ Pipeline terminé avec succès."
-        }
-        failure {
-            echo "❌ Pipeline échoué."
         }
     }
 }
 
-def deployToEnv(envName) {
+def deployWithHelm(env) {
     sh """
-    echo "🔧 Mise à jour des fichiers Helm pour ${envName}"
-    sed -i 's|tag:.*|tag: "${IMAGE_TAG}"|' charts/cast-service/values-${envName}.yaml
-    sed -i 's|tag:.*|tag: "${IMAGE_TAG}"|' charts/movie-service/values-${envName}.yaml
+    echo "[INFO] Déploiement dans l'environnement: ${env}"
+    mkdir -p ~/.kube
+    cat \$KUBECONFIG > ~/.kube/config
 
-    echo "🚀 Déploiement dans le namespace ${envName}"
+    echo "[INFO] Mise à jour des fichiers Helm..."
+    sed -i "s+tag:.*+tag: \\\"${IMAGE_TAG}\\\"+g" charts/cast-service/values-${env}.yaml
+    sed -i "s+tag:.*+tag: \\\"${IMAGE_TAG}\\\"+g" charts/movie-service/values-${env}.yaml
+
+    echo "[INFO] Lancement du déploiement Helm"
     helm upgrade --install cast-service charts/cast-service \
-        --namespace ${envName} \
-        -f charts/cast-service/values-${envName}.yaml
+        --namespace ${env} \
+        -f charts/cast-service/values-${env}.yaml
 
     helm upgrade --install movie-service charts/movie-service \
-        --namespace ${envName} \
-        -f charts/movie-service/values-${envName}.yaml
+        --namespace ${env} \
+        -f charts/movie-service/values-${env}.yaml
     """
 }
 
