@@ -75,10 +75,11 @@ pipeline {
             }
             steps {
                 script {
-                    echo "[INFO] Sur branche master, prêt pour la validation."
-                }  
-                timeout(time: 15, unit: "MINUTES") {
-                    input message: 'Déployer manuellement en PROD ?', ok: 'Oui, déployer'
+                    echo "[INFO] Sur branche master, attente de validation manuelle..."
+
+                    timeout(time: 15, unit: 'MINUTES') {
+                        input message: '✅ Voulez-vous déployer en production ?', ok: 'Déployer en PROD'
+                    }
                 }
             }
         }
@@ -95,6 +96,15 @@ pipeline {
                     deployWithHelm("prod")
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Pipeline terminé avec succès pour l’image ${IMAGE_TAG}"
+        }
+        failure {
+            echo "❌ Pipeline échoué. Consultez les logs."
         }
     }
 }
