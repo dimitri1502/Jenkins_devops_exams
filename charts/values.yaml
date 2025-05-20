@@ -1,5 +1,8 @@
 replicaCount: 3
 
+service:
+  port: 80  # <-- ajouté pour corriger l'erreur Helm
+
 movie_service:
   image:
     repository: dimitri15/movie_service
@@ -63,3 +66,4 @@ nginx:
     port: 8080
     nodePort: 30080
     targetPort: 8080
+
