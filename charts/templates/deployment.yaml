@@ -7,7 +7,7 @@ metadata:
     app: {{ include "fastapiapp.name" . }}
     component: movie-service
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.movie_service.replicaCount | default .Values.replicaCount }}
   selector:
     matchLabels:
       app: {{ include "fastapiapp.name" . }}
@@ -18,6 +18,10 @@ spec:
         app: {{ include "fastapiapp.name" . }}
         component: movie-service
     spec:
+      nodeSelector: {{ toYaml .Values.nodeSelector | nindent 6 }}
+      tolerations: {{ toYaml .Values.tolerations | nindent 6 }}
+      affinity: {{ toYaml .Values.affinity | nindent 6 }}
+      securityContext: {{ toYaml .Values.podSecurityContext | nindent 6 }}
       containers:
         - name: movie-service
           image: "{{ .Values.movie_service.image.repository }}:{{ .Values.movie_service.image.tag }}"
@@ -25,12 +29,14 @@ spec:
           ports:
             - containerPort: {{ .Values.movie_service.service.targetPort }}
           env:
-            - name: DATABASE_URI
-              value: "{{ .Values.movie_service.env.DATABASE_URI }}"
-            - name: CAST_SERVICE_HOST_URL
-              value: "{{ .Values.movie_service.env.CAST_SERVICE_HOST_URL }}"
+            {{- range $key, $value := .Values.movie_service.env }}
+            - name: {{ $key }}
+              value: "{{ $value }}"
+            {{- end }}
           resources:
             {{- toYaml .Values.movie_service.resources | nindent 12 }}
+
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -40,7 +46,7 @@ metadata:
     app: {{ include "fastapiapp.name" . }}
     component: cast-service
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.cast_service.replicaCount | default .Values.replicaCount }}
   selector:
     matchLabels:
       app: {{ include "fastapiapp.name" . }}
@@ -51,14 +57,21 @@ spec:
         app: {{ include "fastapiapp.name" . }}
         component: cast-service
     spec:
+      nodeSelector: {{ toYaml .Values.nodeSelector | nindent 6 }}
+      tolerations: {{ toYaml .Values.tolerations | nindent 6 }}
+      affinity: {{ toYaml .Values.affinity | nindent 6 }}
+      securityContext: {{ toYaml .Values.podSecurityContext | nindent 6 }}
       containers:
         - name: cast-service
-          image: "{{ .Values.cast_service.image.repository }}:{{ .Values.cast_service.image.tag }}"
+          image: "{{ .Values.movie_service.image.repository }}:{{ .Values.movie_service.image.tag }}"
           imagePullPolicy: {{ .Values.cast_service.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.cast_service.service.targetPort }}
           env:
-            - name: DATABASE_URI
-              value: "{{ .Values.cast_service.env.DATABASE_URI }}"
+            {{- range $key, $value := .Values.cast_service.env }}
+            - name: {{ $key }}
+              value: "{{ $value }}"
+            {{- end }}
           resources:
             {{- toYaml .Values.cast_service.resources | nindent 12 }}
+

@@ -7,14 +7,15 @@ metadata:
     app: {{ include "fastapiapp.name" . }}
     component: movie-service
 spec:
-  type: {{ .Values.movie_service.service.type }}
+  type: {{ default "ClusterIP" .Values.movie_service.service.type }}
   ports:
     - port: {{ .Values.movie_service.service.port }}
-      targetPort: {{ .Values.movie_service.service.targetPort }}
+      targetPort: {{ .Values.movie_service.service.targetPort | default .Values.movie_service.service.port }}
       nodePort: {{ .Values.movie_service.service.nodePort | default nil }}
   selector:
     app: {{ include "fastapiapp.name" . }}
     component: movie-service
+
 ---
 apiVersion: v1
 kind: Service
@@ -24,11 +25,12 @@ metadata:
     app: {{ include "fastapiapp.name" . }}
     component: cast-service
 spec:
-  type: {{ .Values.cast_service.service.type }}
+  type: {{ default "ClusterIP" .Values.cast_service.service.type }}
   ports:
     - port: {{ .Values.cast_service.service.port }}
-      targetPort: {{ .Values.cast_service.service.targetPort }}
+      targetPort: {{ .Values.cast_service.service.targetPort | default .Values.cast_service.service.port }}
       nodePort: {{ .Values.cast_service.service.nodePort | default nil }}
   selector:
     app: {{ include "fastapiapp.name" . }}
     component: cast-service
+

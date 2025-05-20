@@ -1,7 +1,30 @@
+# Global values
 replicaCount: 3
+imagePullSecrets: 
+  - name: "regcred"
+nameOverride: ""
+fullnameOverride: ""
 
-service:
-  port: 80  # <-- ajouté pour corriger l'erreur Helm
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
 
 movie_service:
   image:
@@ -58,7 +81,7 @@ postgres_cast:
 
 nginx:
   image:
-    repository: nginx:latest
+    repository: nginx
     tag: "latest"
     pullPolicy: IfNotPresent
   service:
